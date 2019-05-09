@@ -20,7 +20,7 @@
     <licenses>
         <license>
             <name>WTFPL</name>
-            <url>http://www.wtfpl.net/txt/copying/</url>
+            <url>https://github.com/RikudouSage/JenkinsSystemSshPlugin/blob/master/LICENSE</url>
         </license>
     </licenses>
     <!-- Assuming you want to host on @jenkinsci:
