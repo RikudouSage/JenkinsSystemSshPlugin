@@ -7,8 +7,8 @@
     `git clone https://github.com/RikudouSage/JenkinsSystemSshPlugin`
 
 2. Compile the plugin using maven:
-    
-    `mvn package`
+    - `cd JenkinsSystemSshPlugin`
+    - `mvn package`
     
 3. Install the plugin to Jenkins:
     - Click `Manage Jenkins` -> `Manage Plugins` -> `Advanced`
