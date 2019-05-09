@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin executes commands remotely via SSH using the system ssh command
+</div>

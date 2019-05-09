@@ -1,0 +1,23 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <f:entry title="${%SSH site}" field="sshSiteName">
+        <f:select />
+    </f:entry>
+
+    <f:entry title="${%Command}" field="command">
+        <f:textarea />
+    </f:entry>
+
+    <f:entry title="${%Hide command}" field="hideCommand">
+        <f:checkbox />
+    </f:entry>
+
+    <f:entry title="${%Hide output}" field="hideOutput">
+        <f:checkbox />
+    </f:entry>
+
+    <f:entry title="${%Execute each line}" field="executeEachLine">
+        <f:checkbox />
+    </f:entry>
+</j:jelly>

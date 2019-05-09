@@ -1,0 +1,52 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+    <j:set var="helpURL" value="/plugin/system-ssh-plugin"/>
+    <f:section title="${%System SSH remote servers}" name="cz_chrastecky_ssh">
+
+        <f:entry title="${%Local shell}" help="${helpURL}/help-localShell.html">
+            <select name="localShell">
+                <j:forEach var="shell" items="${descriptor.shells}">
+                    <f:option selected="${shell == descriptor.localShell}">${shell}</f:option>
+                </j:forEach>
+            </select>
+        </f:entry>
+        <f:entry title="${%Default username}" help="${helpURL}/help-defaultUsername.html">
+            <f:textbox name="defaultUsername" value="${descriptor.defaultUsername}"/>
+        </f:entry>
+        <f:entry title="${%Default port}" help="${helpURL}/help-defaultPort.html">
+            <f:number name="defaultPort" default="22" value="${descriptor.defaultPort}"/>
+        </f:entry>
+        <f:entry title="${%Default SSH key}" help="${helpURL}/help-defaultKey.html">
+            <f:textbox name="defaultKey" value="${descriptor.defaultKey}"/>
+        </f:entry>
+
+        <f:entry title="Servers:" description="List of servers to connect to">
+            <f:repeatable var="server" items="${descriptor.servers}" name="servers" add="${%Add server}">
+                <table width="50%">
+                    <f:entry title="${%Server name}" help="${helpURL}/help-serverName.html">
+                        <f:textbox name="serverDisplayName" value="${server.serverDisplayName}"/>
+                    </f:entry>
+                    <f:entry title="${%Hostname}" help="${helpURL}/help-hostname.html">
+                        <f:textbox name="hostname" value="${server.hostname}"/>
+                    </f:entry>
+                    <f:entry title="${%Username}" help="${helpURL}/help-username.html">
+                        <f:textbox name="username" value="${server.username}"/>
+                    </f:entry>
+                    <f:entry title="${%Port}" help="${helpURL}/help-port.html">
+                        <f:number name="port" value='${server.port == 0 ? "" : server.port}'/>
+                    </f:entry>
+                    <f:entry title="${%SSH Key}" help="${helpURL}/help-sshKey.html">
+                        <f:textbox name="sshKey" value="${server.sshKey}"/>
+                    </f:entry>
+                    <f:entry title="">
+                        <div align="right">
+                            <f:repeatableDeleteButton/>
+                        </div>
+                    </f:entry>
+                </table>
+            </f:repeatable>
+        </f:entry>
+    </f:section>
+
+</j:jelly>
