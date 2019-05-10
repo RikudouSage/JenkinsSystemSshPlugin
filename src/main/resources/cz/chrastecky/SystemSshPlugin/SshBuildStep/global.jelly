@@ -20,6 +20,9 @@
         <f:entry title="${%Default SSH key}" help="${helpURL}/help-defaultKey.html">
             <f:textbox name="defaultKey" value="${descriptor.defaultKey}"/>
         </f:entry>
+        <f:entry title="${%Default SSH password}" help="${helpUrl}/help-defaultSshPasswordId.html">
+            <c:select field="defaultSshPasswordId" value="${descriptor.defaultSshPasswordId}" />
+        </f:entry>
 
         <f:entry title="Servers:" description="List of servers to connect to">
             <f:repeatable var="server" items="${descriptor.servers}" name="servers" add="${%Add server}">

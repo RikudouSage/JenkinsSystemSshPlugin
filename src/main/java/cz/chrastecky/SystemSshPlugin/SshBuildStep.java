@@ -1,16 +1,26 @@
 package cz.chrastecky.SystemSshPlugin;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.PasswordCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import cz.chrastecky.SystemSshPlugin.System.ShellList;
 import cz.chrastecky.SystemSshPlugin.VO.SshServer;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.*;
+import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.CopyOnWriteList;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import net.sf.json.JSONObject;
 import org.jetbrains.annotations.NotNull;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -19,7 +29,9 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class SshBuildStep extends Builder {
 
@@ -62,26 +74,26 @@ public class SshBuildStep extends Builder {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, @NotNull BuildListener listener) throws InterruptedException, IOException {
-        PrintStream logger = listener.getLogger();
+        PrintStream outputStream = listener.getLogger();
         SshServer server = getDescriptor().getServerByName(sshSiteName, true);
         Result result = build.getResult();
 
         if (server == null) {
-            logger.println("The site named '" + sshSiteName + "' does not exist");
+            outputStream.println("[SSH Plugin] The server named '" + sshSiteName + "' does not exist");
             if (result == null || result.isBetterThan(Result.FAILURE)) {
                 build.setResult(Result.FAILURE);
             }
             return false;
         }
         if (server.getHostname().isEmpty()) {
-            logger.println("The hostname is not defined");
+            outputStream.println("[SSH Plugin] The hostname is not defined");
             if (result == null || result.isBetterThan(Result.FAILURE)) {
                 build.setResult(Result.FAILURE);
             }
             return false;
         }
         if (server.getSshKey().isEmpty()) {
-            logger.println("The path to ssh key is empty");
+            outputStream.println("[SSH Plugin] The path to ssh key is empty");
             if (result == null || result.isBetterThan(Result.FAILURE)) {
                 build.setResult(Result.FAILURE);
             }
@@ -89,7 +101,7 @@ public class SshBuildStep extends Builder {
         }
         File sshKeyFile = new File(server.getSshKey());
         if (!sshKeyFile.exists() || !sshKeyFile.canRead()) {
-            logger.println("The SSH file '" + server.getSshKey() + "' does not exist or is not accessible");
+            outputStream.println("[SSH Plugin] The SSH file '" + server.getSshKey() + "' does not exist or is not accessible");
             if (result == null || result.isBetterThan(Result.FAILURE)) {
                 build.setResult(Result.FAILURE);
             }
@@ -97,7 +109,7 @@ public class SshBuildStep extends Builder {
         }
 
         if (server.getPort() == 0) {
-            logger.println("The SSH port was not set, using 22 as default");
+            outputStream.println("[SSH Plugin] The SSH port was not set, using 22 as default");
             server.setPort(22);
         }
 
@@ -106,23 +118,26 @@ public class SshBuildStep extends Builder {
                 shouldHideOutput(),
                 shouldHideCommand()
         );
-        SshClient sshClient = new SshClient(server, build.getEnvironment(listener), config);
+        SshClient sshClient = new SshClient(server, launcher, config);
+
+        outputStream.println("[SSH Plugin] Executing script on remote server '"+server.getServerDisplayName()+"'");
+        outputStream.println();
 
         int exitCode = 0;
         if (executeEachLine) {
             String[] commands = command.split("\n");
             for (String cmd : commands) {
-                exitCode = sshClient.executeCommand(cmd, logger);
+                exitCode = sshClient.executeCommand(cmd, outputStream);
                 if (exitCode != 0) {
                     break;
                 }
             }
         } else {
-            exitCode = sshClient.executeCommand(command, logger);
+            exitCode = sshClient.executeCommand(command, outputStream);
         }
 
         if (exitCode != 0) {
-            logger.println("The command exited with non-zero status: " + exitCode);
+            outputStream.println("The command exited with non-zero status: " + exitCode);
             if (result == null || result.isBetterThan(Result.FAILURE)) {
                 build.setResult(Result.FAILURE);
             }
@@ -164,6 +179,7 @@ public class SshBuildStep extends Builder {
         private String defaultKey = "";
         private String defaultUsername = "";
         private String localShell = "/bin/sh";
+        private String defaultSshPasswordId = "";
 
         private CopyOnWriteList<SshServer> servers = new CopyOnWriteList<>();
 
@@ -191,6 +207,7 @@ public class SshBuildStep extends Builder {
             defaultKey = json.getString("defaultKey");
             defaultUsername = json.getString("defaultUsername");
             localShell = json.getString("localShell");
+            defaultSshPasswordId = json.getString("defaultSshPasswordId");
 
             List<SshServer> newServers = req.bindJSONToList(SshServer.class, json.get("servers"));
             for (SshServer newServer : newServers) {
@@ -237,7 +254,27 @@ public class SshBuildStep extends Builder {
             }
 
             if (storedServer == null || !fillDefaults) {
-                return null;
+                return storedServer;
+            }
+
+            String sshKey = storedServer.getSshKey().isEmpty() ? defaultKey : storedServer.getSshKey();
+            StandardUsernameCredentials credentials = null;
+            String password = null;
+
+            if (sshKey.equals(defaultKey)) {
+                credentials = getDefaultSshPassword();
+            } else if(!sshKey.isEmpty()) {
+                // todo
+            }
+
+            if (credentials != null) {
+                if (credentials instanceof PasswordCredentials) {
+                    password = Secret.toString(((PasswordCredentials) credentials).getPassword());
+                } else if(credentials instanceof SSHUserPrivateKey) {
+                    password = Secret.toString(((SSHUserPrivateKey) credentials).getPassphrase());
+                } else {
+                    Logger.getGlobal().warning("The System SSH Plugin does not support credentials of type '"+credentials.getClass().toString()+"'");
+                }
             }
 
             return new SshServer(
@@ -245,7 +282,8 @@ public class SshBuildStep extends Builder {
                     storedServer.getHostname(),
                     storedServer.getPort() == 0 ? defaultPort : storedServer.getPort(),
                     storedServer.getSshKey().isEmpty() ? defaultKey : storedServer.getSshKey(),
-                    storedServer.getUsername().isEmpty() ? defaultUsername : storedServer.getUsername()
+                    storedServer.getUsername().isEmpty() ? defaultUsername : storedServer.getUsername(),
+                    password
             );
         }
 
@@ -259,6 +297,14 @@ public class SshBuildStep extends Builder {
             return model;
         }
 
+        public ListBoxModel doFillDefaultSshPasswordIdItems(final @AncestorInPath ItemGroup<?> context) {
+            final List<StandardUsernameCredentials> credentials = CredentialsProvider.lookupCredentials(
+                    StandardUsernameCredentials.class, context, ACL.SYSTEM, Collections.<DomainRequirement>emptyList()
+            );
+
+            return new StandardUsernameListBoxModel().includeEmptyValue().withAll(credentials);
+        }
+
         public String getDefaultUsername() {
             return defaultUsername;
         }
@@ -269,6 +315,27 @@ public class SshBuildStep extends Builder {
 
         public List<String> getShells() {
             return new ShellList().getShells();
+        }
+
+        public String getDefaultSshPasswordId() {
+            return defaultSshPasswordId;
+        }
+
+        @Nullable
+        StandardUsernameCredentials getDefaultSshPassword() {
+            if (defaultSshPasswordId == null || defaultSshPasswordId.isEmpty()) {
+                return null;
+            }
+
+            return CredentialsMatchers.firstOrNull(
+                    CredentialsProvider.lookupCredentials(
+                            StandardUsernameCredentials.class,
+                            (Item) null,
+                            ACL.SYSTEM,
+                            Collections.<DomainRequirement>emptyList()
+                    ),
+                    CredentialsMatchers.withId(defaultSshPasswordId)
+            );
         }
     }
 }
