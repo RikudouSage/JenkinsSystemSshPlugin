@@ -20,7 +20,7 @@
         <f:entry title="${%Default SSH key}" help="${helpURL}/help-defaultKey.html">
             <f:textbox name="defaultKey" value="${descriptor.defaultKey}"/>
         </f:entry>
-        <f:entry title="${%Default SSH password}" help="${helpURL}/help-defaultSshPasswordId.html">
+        <f:entry title="${%Default SSH passphrase}" help="${helpURL}/help-defaultSshPasswordId.html">
             <c:select field="defaultSshPasswordId" value="${descriptor.defaultSshPasswordId}" />
         </f:entry>
 
@@ -42,7 +42,7 @@
                     <f:entry title="${%SSH Key}" help="${helpURL}/help-sshKey.html">
                         <f:textbox name="sshKey" value="${server.sshKey}"/>
                     </f:entry>
-                    <f:entry title="${%SSH password}" help="${helpURL}/help-defaultSshPasswordId.html">
+                    <f:entry title="${%SSH passphrase}" help="${helpURL}/help-passwordCredentialsId.html">
                         <c:select field="passwordCredentialsId" value="${server.passwordCredentialsId}" />
                     </f:entry>
                     <f:entry title="">
