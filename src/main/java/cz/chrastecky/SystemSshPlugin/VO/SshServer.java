@@ -13,6 +13,8 @@ public class SshServer {
     private String username;
     @Nullable
     private String password;
+    @Nullable
+    private String passwordCredentialsId;
 
     @DataBoundConstructor
     public SshServer(
@@ -21,7 +23,8 @@ public class SshServer {
             int port,
             String sshKey,
             String username,
-            @Nullable String password
+            @Nullable String password,
+            @Nullable String passwordCredentialsId
     ) {
         this.serverDisplayName = serverDisplayName;
         this.hostname = hostname;
@@ -29,6 +32,7 @@ public class SshServer {
         this.sshKey = sshKey;
         this.username = username;
         this.password = password;
+        this.passwordCredentialsId = passwordCredentialsId;
     }
 
     public String getHostname() {
@@ -78,5 +82,14 @@ public class SshServer {
 
     public void setPassword(@Nullable String password) {
         this.password = password;
+    }
+
+    @Nullable
+    public String getPasswordCredentialsId() {
+        return passwordCredentialsId;
+    }
+
+    public void setPasswordCredentialsId(@Nullable String passwordCredentialsId) {
+        this.passwordCredentialsId = passwordCredentialsId;
     }
 }

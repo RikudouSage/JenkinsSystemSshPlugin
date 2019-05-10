@@ -120,8 +120,7 @@ public class SshBuildStep extends Builder {
         );
         SshClient sshClient = new SshClient(server, launcher, config);
 
-        outputStream.println("[SSH Plugin] Executing script on remote server '"+server.getServerDisplayName()+"'");
-        outputStream.println();
+        outputStream.println("[SSH Plugin] Executing script on remote server '" + server.getServerDisplayName() + "'");
 
         int exitCode = 0;
         if (executeEachLine) {
@@ -257,23 +256,20 @@ public class SshBuildStep extends Builder {
                 return storedServer;
             }
 
-            String sshKey = storedServer.getSshKey().isEmpty() ? defaultKey : storedServer.getSshKey();
-            StandardUsernameCredentials credentials = null;
+            StandardUsernameCredentials credentials = getSshPassword(
+                    storedServer.getPasswordCredentialsId() == null || storedServer.getPasswordCredentialsId().isEmpty() ?
+                            defaultSshPasswordId : storedServer.getPasswordCredentialsId()
+            );
+            ;
             String password = null;
-
-            if (sshKey.equals(defaultKey)) {
-                credentials = getDefaultSshPassword();
-            } else if(!sshKey.isEmpty()) {
-                // todo
-            }
 
             if (credentials != null) {
                 if (credentials instanceof PasswordCredentials) {
                     password = Secret.toString(((PasswordCredentials) credentials).getPassword());
-                } else if(credentials instanceof SSHUserPrivateKey) {
+                } else if (credentials instanceof SSHUserPrivateKey) {
                     password = Secret.toString(((SSHUserPrivateKey) credentials).getPassphrase());
                 } else {
-                    Logger.getGlobal().warning("The System SSH Plugin does not support credentials of type '"+credentials.getClass().toString()+"'");
+                    Logger.getGlobal().warning("The System SSH Plugin does not support credentials of type '" + credentials.getClass().toString() + "'");
                 }
             }
 
@@ -283,7 +279,9 @@ public class SshBuildStep extends Builder {
                     storedServer.getPort() == 0 ? defaultPort : storedServer.getPort(),
                     storedServer.getSshKey().isEmpty() ? defaultKey : storedServer.getSshKey(),
                     storedServer.getUsername().isEmpty() ? defaultUsername : storedServer.getUsername(),
-                    password
+                    password,
+                    storedServer.getPasswordCredentialsId() == null || storedServer.getPasswordCredentialsId().isEmpty()
+                            ? defaultSshPasswordId : storedServer.getPasswordCredentialsId()
             );
         }
 
@@ -305,6 +303,10 @@ public class SshBuildStep extends Builder {
             return new StandardUsernameListBoxModel().includeEmptyValue().withAll(credentials);
         }
 
+        public ListBoxModel doFillPasswordCredentialsIdItems(final @AncestorInPath ItemGroup<?> context) {
+            return doFillDefaultSshPasswordIdItems(context);
+        }
+
         public String getDefaultUsername() {
             return defaultUsername;
         }
@@ -322,11 +324,7 @@ public class SshBuildStep extends Builder {
         }
 
         @Nullable
-        StandardUsernameCredentials getDefaultSshPassword() {
-            if (defaultSshPasswordId == null || defaultSshPasswordId.isEmpty()) {
-                return null;
-            }
-
+        StandardUsernameCredentials getSshPassword(String credentialsId) {
             return CredentialsMatchers.firstOrNull(
                     CredentialsProvider.lookupCredentials(
                             StandardUsernameCredentials.class,
@@ -334,7 +332,7 @@ public class SshBuildStep extends Builder {
                             ACL.SYSTEM,
                             Collections.<DomainRequirement>emptyList()
                     ),
-                    CredentialsMatchers.withId(defaultSshPasswordId)
+                    CredentialsMatchers.withId(credentialsId)
             );
         }
     }
